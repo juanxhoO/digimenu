@@ -7,13 +7,20 @@ import { fileURLToPath } from 'url'
 import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
+import { Locations } from './collections/Locations'
 import { Posts } from './collections/Posts'
+import { Tenants } from './collections/Tenants'
+import { PriceLists } from './collections/PriceLists'
 import { Users } from './collections/Users'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL } from './utilities/getURL'
+import { multiTenantPlugin } from '@payloadcms/plugin-multi-tenant'
+import { Menus } from './collections/Menus'
+import { Sections } from './collections/Sections'
+import { MenuItems } from './collections/MenuItems'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -62,10 +69,21 @@ export default buildConfig({
       connectionString: process.env.DATABASE_URL || '',
     },
   }),
-  collections: [Pages, Posts, Media, Categories, Users],
+  collections: [Pages, Posts, Media, Categories, Tenants, Users, Locations, Menus, Sections,MenuItems, PriceLists],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
-  plugins,
+  plugins: [
+    ...plugins,
+    multiTenantPlugin({
+      collections: {
+        locations: {},
+        menus: {},
+        sections: {},
+        'menu-items': {},
+        'price-lists': {},
+      },
+    }),
+  ],
   secret: process.env.PAYLOAD_SECRET,
   sharp,
   typescript: {

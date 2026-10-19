@@ -71,7 +71,13 @@ export interface Config {
     posts: Post;
     media: Media;
     categories: Category;
+    tenants: Tenant;
     users: User;
+    locations: Location;
+    menus: Menu;
+    sections: Section;
+    'menu-items': MenuItem;
+    'price-lists': PriceList;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -93,7 +99,13 @@ export interface Config {
     posts: PostsSelect<false> | PostsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    tenants: TenantsSelect<false> | TenantsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    locations: LocationsSelect<false> | LocationsSelect<true>;
+    menus: MenusSelect<false> | MenusSelect<true>;
+    sections: SectionsSelect<false> | SectionsSelect<true>;
+    'menu-items': MenuItemsSelect<false> | MenuItemsSelect<true>;
+    'price-lists': PriceListsSelect<false> | PriceListsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -420,6 +432,12 @@ export interface Category {
 export interface User {
   id: number;
   name?: string | null;
+  tenants?:
+    | {
+        tenant: number | Tenant;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -439,6 +457,31 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenants".
+ */
+export interface Tenant {
+  id: number;
+  title: string;
+  logo?: (number | null) | Media;
+  currency: 'USD' | 'EUR' | 'GBP' | 'MXN' | 'CAD';
+  /**
+   * Store POS API keys securely via environment variables, not here.
+   */
+  posCredentials?: {
+    posProvider?: ('toast' | 'square' | 'clover' | 'lightspeed' | 'custom') | null;
+    posLocationId?: string | null;
+  };
+  brandColors?: {
+    primary?: string | null;
+    secondary?: string | null;
+    accent?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -775,6 +818,113 @@ export interface Form {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "locations".
+ */
+export interface Location {
+  id: number;
+  tenant?: (number | null) | Tenant;
+  name: string;
+  slug: string;
+  address?: string | null;
+  timezone?: string | null;
+  /**
+   * The location ID in the external POS system.
+   */
+  posLocationId?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "menus".
+ */
+export interface Menu {
+  id: number;
+  tenant?: (number | null) | Tenant;
+  title: string;
+  location: number | Location;
+  /**
+   * Ordered list of sections in this menu.
+   */
+  sections?: (number | Section)[] | null;
+  status?: ('draft' | 'published' | 'archived') | null;
+  publishedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sections".
+ */
+export interface Section {
+  id: number;
+  tenant?: (number | null) | Tenant;
+  title: string;
+  /**
+   * Lower numbers appear first.
+   */
+  sortOrder?: number | null;
+  items?: (number | MenuItem)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "menu-items".
+ */
+export interface MenuItem {
+  id: number;
+  tenant?: (number | null) | Tenant;
+  title: string;
+  description?: string | null;
+  /**
+   * Default price. Can be overridden per location.
+   */
+  basePrice: number;
+  image?: (number | null) | Media;
+  /**
+   * The item ID in the external POS system. Used for sync.
+   */
+  posItemId?: string | null;
+  available?: boolean | null;
+  /**
+   * Override the base price for specific locations.
+   */
+  priceOverrides?:
+    | {
+        location: number | Location;
+        price: number;
+        id?: string | null;
+      }[]
+    | null;
+  allergens?: ('gluten' | 'dairy' | 'nuts' | 'shellfish' | 'eggs' | 'soy')[] | null;
+  dietaryTags?: ('vegetarian' | 'vegan' | 'gluten-free' | 'halal' | 'kosher')[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "price-lists".
+ */
+export interface PriceList {
+  id: number;
+  tenant?: (number | null) | Tenant;
+  name: string;
+  location: number | Location;
+  activeFrom?: string | null;
+  activeTo?: string | null;
+  items?:
+    | {
+        menuItem: number | MenuItem;
+        price: number;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -980,8 +1130,32 @@ export interface PayloadLockedDocument {
         value: number | Category;
       } | null)
     | ({
+        relationTo: 'tenants';
+        value: number | Tenant;
+      } | null)
+    | ({
         relationTo: 'users';
         value: number | User;
+      } | null)
+    | ({
+        relationTo: 'locations';
+        value: number | Location;
+      } | null)
+    | ({
+        relationTo: 'menus';
+        value: number | Menu;
+      } | null)
+    | ({
+        relationTo: 'sections';
+        value: number | Section;
+      } | null)
+    | ({
+        relationTo: 'menu-items';
+        value: number | MenuItem;
+      } | null)
+    | ({
+        relationTo: 'price-lists';
+        value: number | PriceList;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -1327,10 +1501,41 @@ export interface CategoriesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenants_select".
+ */
+export interface TenantsSelect<T extends boolean = true> {
+  title?: T;
+  logo?: T;
+  currency?: T;
+  posCredentials?:
+    | T
+    | {
+        posProvider?: T;
+        posLocationId?: T;
+      };
+  brandColors?:
+    | T
+    | {
+        primary?: T;
+        secondary?: T;
+        accent?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
+  tenants?:
+    | T
+    | {
+        tenant?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1348,6 +1553,90 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "locations_select".
+ */
+export interface LocationsSelect<T extends boolean = true> {
+  tenant?: T;
+  name?: T;
+  slug?: T;
+  address?: T;
+  timezone?: T;
+  posLocationId?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "menus_select".
+ */
+export interface MenusSelect<T extends boolean = true> {
+  tenant?: T;
+  title?: T;
+  location?: T;
+  sections?: T;
+  status?: T;
+  publishedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sections_select".
+ */
+export interface SectionsSelect<T extends boolean = true> {
+  tenant?: T;
+  title?: T;
+  sortOrder?: T;
+  items?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "menu-items_select".
+ */
+export interface MenuItemsSelect<T extends boolean = true> {
+  tenant?: T;
+  title?: T;
+  description?: T;
+  basePrice?: T;
+  image?: T;
+  posItemId?: T;
+  available?: T;
+  priceOverrides?:
+    | T
+    | {
+        location?: T;
+        price?: T;
+        id?: T;
+      };
+  allergens?: T;
+  dietaryTags?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "price-lists_select".
+ */
+export interface PriceListsSelect<T extends boolean = true> {
+  tenant?: T;
+  name?: T;
+  location?: T;
+  activeFrom?: T;
+  activeTo?: T;
+  items?:
+    | T
+    | {
+        menuItem?: T;
+        price?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1754,6 +2043,10 @@ export interface TaskSchedulePublish {
       | ({
           relationTo: 'posts';
           value: number | Post;
+        } | null)
+      | ({
+          relationTo: 'tenants';
+          value: number | Tenant;
         } | null);
     global?: string | null;
     user?: {
